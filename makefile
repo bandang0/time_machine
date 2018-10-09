@@ -3,6 +3,6 @@
 # install: move to /usr/local/bin (run as root)
 
 install: 
-	mv time_machine /usr/local/bin
+	cp time_machine.py /usr/local/bin/time_machine
 
 
