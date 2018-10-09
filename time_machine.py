@@ -1,15 +1,24 @@
 #!/bin/env python3
 '''Time machine program main file.'''
 
+import os.path as path
 import tkinter as tk
-from lxml import etree
+import xml.etree.ElementTree as ET
 from tkinter import scrolledtext
 
 # Global variable initialization.
-TIME_MACHINE_FILE = ".time_machine.xml"
+TM_FILE = path.expanduser("~/.time_machine.xml")
+TM_FILE_HEADER = "<root>\n</root>\n"
 INPUT_LIST = list()
 NAME_BOXES = list()
 DESCRIPTION_BOXES = list()
+
+def init_tm_file():
+    """Check existence of TM file and create it if not."""
+    if not path.isfile(TM_FILE):
+        with open(TM_FILE, 'w') as tm_file:
+            tm_file.write(TM_FILE_HEADER)
+        print("Initialized time_machine file in {}.".format(TM_FILE))
 
 def add_empty_entry():
     """Adds a empty graphical container for a new entry."""
@@ -24,7 +33,7 @@ def add_empty_entry():
 
 def save_xml():
     """Write current entry content to the xml config file."""
-    out_root = etree.Element("root")
+    out_root = ET.Element("root")
     n = 0 #count
     for i in range(len(NAME_BOXES)):
         ntext = NAME_BOXES[i].get().strip()
@@ -33,34 +42,44 @@ def save_xml():
         # Only write if some entry.
         if len(ntext) + len(dtext) > 0:
             n = n + 1
-            pers = etree.SubElement(out_root, "pers")
-            name = etree.SubElement(pers, "name")
+            pers = ET.SubElement(out_root, "pers")
+            name = ET.SubElement(pers, "name")
             name.text = ntext
 
-            description = etree.SubElement(pers, "description")
+            description = ET.SubElement(pers, "description")
             description.text = dtext
 
-    out_tree = etree.ElementTree(out_root)
-    out_tree.write(TIME_MACHINE_FILE, pretty_print=True)
-    print("Done saving data to {}, {} entries.".format(TIME_MACHINE_FILE, n))
+    out_tree = ET.ElementTree(out_root)
+    out_tree.write(TM_FILE, xml_declaration=True)
+    print("Done saving data to {}, {} entries.".format(TM_FILE, n))
 
-# GUI init and buttons.
+def close_window():
+    """Closes the window, terminating the program."""
+    WINDOW.destroy()
+
+# GUI window.
 WINDOW = tk.Tk()
 WINDOW.title("Time machine")
-save_btn = tk.Button(WINDOW, text="Save", command=save_xml)
+
+# Add button.
 add_btn = tk.Button(WINDOW, text="Add Entry", command=add_empty_entry)
-save_btn.grid(column=1, row=0)
 add_btn.grid(column=0, row=0)
 
-# Parse xml input.
-XML_IN = etree.parse(TIME_MACHINE_FILE).getroot()
+# Save button.
+save_btn = tk.Button(WINDOW, text="Save", command=save_xml)
+save_btn.grid(column=1, row=0)
 
-# Read list of person content from xml elements.
-for pers in XML_IN:
-    INPUT_LIST.append({'name': pers[0].text,
-                        'description': pers[1].text})
-print("Done reading data from {}, {} entries.".format(TIME_MACHINE_FILE,
-                                                len(INPUT_LIST)))
+# Close button.
+close_btn = tk.Button(WINDOW, text="Close", command=close_window)
+close_btn.grid(column=2, row=0)
+
+# Initialize XML file.
+init_tm_file()
+
+# Parse xml file and read initial list of person content from xml elements.
+INPUT_LIST = [{'name': pers[0].text,
+               'description': pers[1].text} for pers in ET.parse(TM_FILE).getroot()]
+print("Done reading data from {}, {} entries.".format(TM_FILE, len(INPUT_LIST)))
 
 # Render the data in the graphical window and populate list of widgets.
 for i, pers in enumerate(INPUT_LIST):
